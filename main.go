@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -17,8 +18,8 @@ var (
 )
 
 type Project struct {
-	forks_count int
-	archived    bool
+	Forks_count int  `json:"forks_count"`
+	Archived    bool `json:"archived"`
 	Namespace   struct {
 		Kind string `json:"kind"`
 	} `json:"namespace"`
@@ -77,8 +78,8 @@ func main() {
 		total += len(projects)
 
 		for _, project := range projects {
-			forks += project.forks_count
-			if project.archived {
+			forks += project.Forks_count
+			if project.Archived == true {
 				archived++
 			}
 			if project.Namespace.Kind == "user" {
@@ -88,11 +89,12 @@ func main() {
 			}
 		}
 
-		if header.Get("X-Next-Page") == "" {
-			break
-		} else {
+		if header.Get("X-Next-Page") != "" {
 			page, _ = strconv.Atoi(header.Get("X-Next-Page"))
+			continue
 		}
+
+		break
 	}
 
 	report_json, err := json.Marshal(ReportPayload{
@@ -109,8 +111,8 @@ func main() {
 
 	fmt.Println(string(report_json))
 
-	// reporting_req, _ := http.NewRequest("PUT", *reporting_url, bytes.NewBuffer(report_json))
-	// reporting_req.Header.Add("x-api-key", *reporting_access_token)
-	// body, _ := http_request(reporting_req)
-	// fmt.Println(body)
+	reporting_req, _ := http.NewRequest("PUT", *reporting_url, bytes.NewBuffer(report_json))
+	reporting_req.Header.Add("x-api-key", *reporting_access_token)
+	body, _ := http_request(reporting_req)
+	fmt.Println(body)
 }
