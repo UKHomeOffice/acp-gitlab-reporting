@@ -12,9 +12,9 @@
 | ----------- | ----------- | ----------- | ----------- |
 | -dry-run      | Flag if true will not send the report to the remote endpoint.       | false      | false       |
 |  -gitlab-access-token      | Gitlab access token used to authenticate against the API.       | n/a      | true       |
-|  -gitlab-url      | Gitlab host API      | n/a      | true       |
+|  -gitlab-host      | Gitlab host API      | n/a      | true       |
 | -reporting-access-token      | Access token used to authenticate against the reporting API.       | n/a      | true       |
-| -reporting-url      | Reporting host api.      | n/a      | true       |
+| -reporting-url      | Reporting URL.      | n/a      | true       |
  
  
  ## Report payload structure

@@ -11,11 +11,11 @@ import (
 )
 
 var (
-	gitlabUrl            = flag.String("gitlab-url", "", "")
-	gitlabAccessToken    = flag.String("gitlab-access-token", "", "")
-	reportingUrl         = flag.String("reporting-url", "", "")
-	reportingAccessToken = flag.String("reporting-access-token", "", "")
-	dryRun               = flag.Bool("dry-run", false, "")
+	gitlabHost           = flag.String("gitlab-host", "", "Gitlab host API")
+	gitlabAccessToken    = flag.String("gitlab-access-token", "", "Gitlab access token used to authenticate against the API.")
+	reportingUrl         = flag.String("reporting-url", "", "Reporting endpoint url.")
+	reportingAccessToken = flag.String("reporting-access-token", "", "Access token used to authenticate against the reporting API.")
+	dryRun               = flag.Bool("dry-run", false, "Flag if true will not send the report to the remote endpoint.")
 )
 
 type GitlabProject struct {
@@ -47,7 +47,7 @@ func main() {
 	var page = 1
 
 	for {
-		req, err := http.NewRequest("GET", *gitlabUrl+"/api/v4/projects", nil)
+		req, err := http.NewRequest("GET", *gitlabHost+"/api/v4/projects", nil)
 		if err != nil {
 			panic(err)
 		}
