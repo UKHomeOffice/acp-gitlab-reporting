@@ -1,0 +1,53 @@
+---
+kind: pipeline
+type: kubernetes
+name: default
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: build-image
+  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
+  commands:
+  - /usr/local/bin/wait
+  - docker build -t acp-gitlab-reporting:latest .
+
+- name: scan
+  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/anchore-submission:latest
+  pull: always
+  environment:
+    IMAGE_NAME: acp-gitlab-reporting:latest
+    TOLERATE: low
+  depends_on:
+    - build-image
+  when:
+    event:
+    - push
+
+- name: push_to_quay
+  image: plugins/docker
+  settings:
+    registry: quay.io
+    repo: quay.io/ukhomeofficedigital/my-quay-repo
+    tags: ${DRONE_TAG}
+  environment:
+    DOCKER_PASSWORD:
+      from_secret: QUAY_TOKEN
+    DOCKER_USERNAME: ukhomeofficedigital+acp_gitlab_reporting
+  when:
+    branch:
+    - master
+    event:
+    - tag
+
+services:
+- name: docker
+  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
+
+- name: anchore-submission-server
+  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/anchore-submission:latest
+  pull: always
+  commands:
+    - /run.sh server
