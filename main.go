@@ -4,20 +4,21 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strconv"
 )
 
 var (
-	gitlab_url             = flag.String("gitlab_url", "", "")
-	gitlab_access_token    = flag.String("gitlab_access_token", "", "")
-	reporting_url          = flag.String("reporting_url", "", "")
-	reporting_access_token = flag.String("reporting_access_token", "", "")
+	gitlabUrl            = flag.String("gitlab-url", "", "")
+	gitlabAccessToken    = flag.String("gitlab-access-token", "", "")
+	reportingUrl         = flag.String("reporting-url", "", "")
+	reportingAccessToken = flag.String("reporting-access-token", "", "")
+	dryRun               = flag.Bool("dry-run", false, "")
 )
 
-type Project struct {
+type GitlabProject struct {
 	Forks_count int  `json:"forks_count"`
 	Archived    bool `json:"archived"`
 	Namespace   struct {
@@ -31,6 +32,73 @@ type ReportPayload struct {
 	Archived int `json:"archived"` // The number of archived/unused repos if possible
 	Personal int `json:"personal"` // The number of personal user repos
 	Groups   int `json:"groups"`   // The number of GitLab groups repos
+}
+
+func main() {
+	flag.Parse()
+
+	report := ReportPayload{
+		Total:    0,
+		Forks:    0,
+		Archived: 0,
+		Personal: 0,
+		Groups:   0,
+	}
+	var page = 1
+
+	for {
+		req, err := http.NewRequest("GET", *gitlabUrl+"/api/v4/projects", nil)
+		if err != nil {
+			panic(err)
+		}
+		req.Header.Add("PRIVATE-TOKEN", *gitlabAccessToken)
+		req.URL.RawQuery = "per_page=100&pagination=true&page=" + strconv.Itoa(page)
+		response_body, header := http_request(req)
+
+		var projects []GitlabProject
+
+		if err := json.Unmarshal(response_body, &projects); err != nil {
+			panic(err)
+		}
+
+		report.Total += len(projects)
+
+		for _, project := range projects {
+			report.Forks += project.Forks_count
+			if project.Archived {
+				report.Archived++
+			}
+			if project.Namespace.Kind == "user" {
+				report.Personal++
+			} else if project.Namespace.Kind == "group" {
+				report.Groups++
+			}
+		}
+
+		if header.Get("X-Next-Page") != "" {
+			page, _ = strconv.Atoi(header.Get("X-Next-Page"))
+			continue
+		}
+
+		break
+	}
+
+	report_json, err := json.Marshal(report)
+
+	if err != nil {
+		panic(err)
+	}
+
+	log.Println("Report:")
+	log.Println(string(report_json))
+
+	if !*dryRun {
+		reporting_req, _ := http.NewRequest("PUT", *reportingUrl, bytes.NewBuffer(report_json))
+		reporting_req.Header.Add("x-api-key", *reportingAccessToken)
+		body, _ := http_request(reporting_req)
+		log.Println("Response payload: ")
+		log.Println(body)
+	}
 }
 
 func http_request(req *http.Request) ([]byte, http.Header) {
@@ -48,71 +116,8 @@ func http_request(req *http.Request) ([]byte, http.Header) {
 	}
 
 	if resp.StatusCode != 200 {
-		fmt.Println(string(body))
+		log.Println(string(body))
 		panic("Incorrect status code")
 	}
 	return body, resp.Header
-}
-
-func main() {
-	flag.Parse()
-
-	var total, forks, archived, personal, groups = 0, 0, 0, 0, 0
-	var page = 1
-
-	for {
-		req, err := http.NewRequest("GET", *gitlab_url+"/api/v4/projects", nil)
-		if err != nil {
-			panic(err)
-		}
-		req.Header.Add("PRIVATE-TOKEN", *gitlab_access_token)
-		req.URL.RawQuery = "per_page=100&pagination=true&page=" + strconv.Itoa(page)
-		response_body, header := http_request(req)
-
-		var projects []Project
-
-		if err := json.Unmarshal(response_body, &projects); err != nil {
-			panic(err)
-		}
-
-		total += len(projects)
-
-		for _, project := range projects {
-			forks += project.Forks_count
-			if project.Archived == true {
-				archived++
-			}
-			if project.Namespace.Kind == "user" {
-				personal++
-			} else if project.Namespace.Kind == "group" {
-				groups++
-			}
-		}
-
-		if header.Get("X-Next-Page") != "" {
-			page, _ = strconv.Atoi(header.Get("X-Next-Page"))
-			continue
-		}
-
-		break
-	}
-
-	report_json, err := json.Marshal(ReportPayload{
-		Total:    total,
-		Forks:    forks,
-		Archived: archived,
-		Personal: personal,
-		Groups:   groups,
-	})
-
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(string(report_json))
-
-	reporting_req, _ := http.NewRequest("PUT", *reporting_url, bytes.NewBuffer(report_json))
-	reporting_req.Header.Add("x-api-key", *reporting_access_token)
-	body, _ := http_request(reporting_req)
-	fmt.Println(body)
 }
