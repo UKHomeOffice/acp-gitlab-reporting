@@ -17,5 +17,5 @@ RUN addgroup -g 1000 -S app && \
 
 USER 1000
 
-COPY --from=builder /go/bin/acp-gitlab-reporting /app
-CMD ["/app"]
+COPY --from=builder /go/bin/acp-gitlab-reporting /acp-gitlab-reporter
+CMD ["/acp-gitlab-reporter"]
