@@ -37,8 +37,8 @@ steps:
       from_secret: QUAY_TOKEN
     DOCKER_USERNAME: ukhomeofficedigital+acp_gitlab_reporting
   when:
-    # branch:
-    # - master
+    branch:
+    - master
     event:
     - tag
 
