@@ -49,7 +49,7 @@ func main() {
 	for {
 		req, err := http.NewRequest("GET", *gitlabHost+"/api/v4/projects", nil)
 		if err != nil {
-			panic(err)
+			log.Fatal(err.Error())
 		}
 		req.Header.Add("PRIVATE-TOKEN", *gitlabAccessToken)
 		req.URL.RawQuery = "per_page=100&pagination=true&page=" + strconv.Itoa(page)
@@ -58,7 +58,7 @@ func main() {
 		var projects []GitlabProject
 
 		if err := json.Unmarshal(response_body, &projects); err != nil {
-			panic(err)
+			log.Fatal(err.Error())
 		}
 
 		report.Total += len(projects)
@@ -86,7 +86,7 @@ func main() {
 	report_json, err := json.Marshal(report)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err.Error())
 	}
 
 	log.Println("Report:")
@@ -105,19 +105,19 @@ func http_request(req *http.Request) ([]byte, http.Header) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		log.Fatal(err.Error())
 	}
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err.Error())
 	}
 
 	if resp.StatusCode != 200 {
 		log.Println(string(body))
-		panic("Incorrect status code")
+		log.Fatal("Unexpected status code")
 	}
 	return body, resp.Header
 }
