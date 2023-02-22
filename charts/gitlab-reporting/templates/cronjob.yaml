@@ -1,0 +1,46 @@
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: {{ .Values.name }}
+spec:
+  schedule: {{ .Values.schedule }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: reporter
+            image: {{ .Values.image }}
+            command: ["./acp-gitlab-reporter"]
+            args:
+              - -gitlab-host=$(GITLAB_HOST)
+              - -gitlab-access-token=$(GITLAB_ACCESS_TOKEN)
+              - -reporting-url=$(REPORTING_URL)
+              - -reporting-access-token=$(REPORTING_ACCESS_TOKEN)
+{{- if .Values.dryRun }}
+              - -dry-run
+{{- end }}
+            env:
+              - name: GITLAB_HOST
+                valueFrom:
+                  secretKeyRef:
+                    name: {{ .Values.secretName}} 
+                    key: gitlabHost
+              - name: GITLAB_ACCESS_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: {{ .Values.secretName}}
+                    key: gitlabAccessToken
+              - name: REPORTING_URL
+                valueFrom:
+                  secretKeyRef:
+                    name: {{ .Values.secretName}} 
+                    key: reportingUrl
+              - name: REPORTING_ACCESS_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: {{ .Values.secretName}}
+                    key: reportingAccessToken
+          restartPolicy: Never
+      backoffLimit: 1
