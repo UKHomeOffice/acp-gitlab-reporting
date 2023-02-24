@@ -38,7 +38,7 @@ steps:
     DOCKER_USERNAME: ukhomeofficedigital+acp_gitlab_reporting
   when:
     branch:
-    - master
+    - main
     event:
     - tag
 
