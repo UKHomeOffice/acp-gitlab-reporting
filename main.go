@@ -46,6 +46,7 @@ func main() {
 	}
 	var page = 1
 
+	// Loops until a response doesn't return an X-Next-Page header
 	for {
 		req, err := http.NewRequest("GET", *gitlabHost+"/api/v4/projects", nil)
 		if err != nil {
@@ -53,7 +54,7 @@ func main() {
 		}
 		req.Header.Add("PRIVATE-TOKEN", *gitlabAccessToken)
 		req.URL.RawQuery = "per_page=100&pagination=true&page=" + strconv.Itoa(page)
-		response_body, header := http_request(req)
+		response_body, header := doHttpRequest(req)
 
 		var projects []GitlabProject
 
@@ -92,16 +93,21 @@ func main() {
 	log.Println("Report:")
 	log.Println(string(report_json))
 
+	// If this isn't a dry run, publish the report
 	if !*dryRun {
-		reporting_req, _ := http.NewRequest("PUT", *reportingUrl, bytes.NewBuffer(report_json))
+		reporting_req, err := http.NewRequest("PUT", *reportingUrl, bytes.NewBuffer(report_json))
+		if err != nil {
+			log.Fatal(err.Error())
+		}
 		reporting_req.Header.Add("x-api-key", *reportingAccessToken)
-		body, _ := http_request(reporting_req)
+		body, _ := doHttpRequest(reporting_req)
 		log.Println("Response payload: ")
 		log.Println(body)
 	}
 }
 
-func http_request(req *http.Request) ([]byte, http.Header) {
+// doHttpRequest do http request and return body and http headers
+func doHttpRequest(req *http.Request) ([]byte, http.Header) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
